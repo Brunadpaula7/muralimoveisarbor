@@ -526,6 +526,8 @@
             transition: var(--transition);
             flex-shrink: 0;
         }
+        .music-btn.needs-tap { animation: pulse 1.6s ease-in-out infinite; border-color: var(--areia); }
+        @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(188,149,112,.55); } 50% { box-shadow: 0 0 0 12px rgba(188,149,112,0); } }
         .music-btn:hover { background: var(--areia); color: var(--verde-deep); transform: scale(1.08); }
         .music-btn svg { width: 18px; height: 18px; }
 
@@ -659,9 +661,7 @@
 </div>
 
 <!-- Áudio: estação de jazz; reprodução iniciada pelo usuário -->
-<audio id="music" preload="none" crossorigin="anonymous">
-    <source id="music-src" src="" type="audio/mpeg">
-</audio>
+<audio id="music" preload="none"></audio>
 
 <nav>
     <a href="#" class="nav-logo">Arbor Imóveis</a>
@@ -1014,60 +1014,99 @@ const init = async () => {
     setTimeout(() => loader.style.display = 'none', 500);
 };
 
-/* ── Player de jazz ── */
-const JAZZ_STREAM = 'https://ice5.somafm.com/sonicuniverse-128-mp3';
+/* ── Player de jazz ──
+   Várias rádios de reserva: se uma cair, tenta a próxima.
+   Navegadores bloqueiam som automático; por isso tentamos tocar ao abrir
+   e, se bloquear, começa no primeiro toque/clique/tecla em qualquer lugar. */
+const JAZZ_STREAMS = [
+    'https://ice1.somafm.com/sonicuniverse-128-mp3',
+    'https://ice2.somafm.com/sonicuniverse-128-mp3',
+    'https://ice4.somafm.com/sonicuniverse-128-mp3',
+    'https://ice5.somafm.com/sonicuniverse-128-mp3',
+    'https://ice6.somafm.com/sonicuniverse-128-mp3',
+    'https://ice1.somafm.com/groovesalad-128-mp3'
+];
 
+let musicWanted = false;   /* o usuário (ou a abertura) quer música tocando */
 let musicPlaying = false;
+let streamIndex = 0;
+let retryTimer = null;
 
 const audio = document.getElementById('music');
-const musicSrc = document.getElementById('music-src');
 const waves = document.getElementById('waves');
 const panel = document.getElementById('music-panel');
 const iconPlay = document.getElementById('icon-play');
 const iconPause = document.getElementById('icon-pause');
-const volSlider = document.getElementById('vol-slider');
+const musicBtn = document.getElementById('music-btn');
 
-// Volume inicial
 audio.volume = 0.5;
-
 const setVolume = v => { audio.volume = parseFloat(v); };
 
-const toggleMusic = () => {
-    if (!musicPlaying) {
-        // Primeira vez: carrega a estação padrão
-        if (!musicSrc.src || musicSrc.src === window.location.href) {
-            musicSrc.src = JAZZ_STREAM;
-            audio.load();
-        }
-        audio.play()
-            .then(() => {
-                musicPlaying = true;
-                waves.classList.remove('paused');
-                iconPlay.style.display  = 'none';
-                iconPause.style.display = 'block';
-                panel.classList.add('open');
-            })
-            .catch(err => {
-                console.warn('Autoplay bloqueado:', err);
-            });
-    } else {
-        audio.pause();
-        musicPlaying = false;
-        waves.classList.add('paused');
-        iconPlay.style.display  = 'block';
-        iconPause.style.display = 'none';
-    }
+const showMusicState = playing => {
+    musicPlaying = playing;
+    waves.classList.toggle('paused', !playing);
+    iconPlay.style.display  = playing ? 'none'  : 'block';
+    iconPause.style.display = playing ? 'block' : 'none';
+    if (playing) panel.classList.add('open');
+    musicBtn.classList.remove('needs-tap');
 };
 
-// Reconecta stream se cair
-audio.addEventListener('error', () => {
-    if (musicPlaying) {
-        setTimeout(() => { audio.load(); audio.play().catch(() => {}); }, 3000);
-    }
-});
-audio.addEventListener('ended', () => {
-    if (musicPlaying) { audio.load(); audio.play().catch(() => {}); }
-});
+const loadStream = () => {
+    audio.src = JAZZ_STREAMS[streamIndex % JAZZ_STREAMS.length];
+    audio.load();
+};
+
+/* Tenta tocar; em falha de rede troca de rádio, em bloqueio de autoplay espera um toque */
+const startMusic = () => {
+    musicWanted = true;
+    clearTimeout(retryTimer);
+    if (!audio.src) loadStream();
+    return audio.play()
+        .then(() => {
+            showMusicState(true);
+            removeFirstTapListeners();
+        })
+        .catch(err => {
+            if (err && err.name === 'NotAllowedError') {
+                showMusicState(false);
+                musicBtn.classList.add('needs-tap');   /* pisca o botão chamando para tocar */
+                addFirstTapListeners();
+            } else {
+                nextStream();
+            }
+        });
+};
+
+const stopMusic = () => {
+    musicWanted = false;
+    clearTimeout(retryTimer);
+    audio.pause();
+    showMusicState(false);
+};
+
+const nextStream = () => {
+    if (!musicWanted) return;
+    streamIndex++;
+    loadStream();
+    /* depois de dar a volta em todas as rádios, espera um pouco antes de insistir */
+    const delay = streamIndex % JAZZ_STREAMS.length === 0 ? 15000 : 500;
+    retryTimer = setTimeout(startMusic, delay);
+};
+
+const toggleMusic = () => (musicPlaying || (musicWanted && !audio.paused)) ? stopMusic() : startMusic();
+
+/* Começa no primeiro gesto do usuário quando o autoplay foi bloqueado */
+const firstTap = () => { if (musicWanted && !musicPlaying) startMusic(); };
+const addFirstTapListeners = () => ['pointerdown', 'keydown', 'touchstart'].forEach(e => window.addEventListener(e, firstTap, { once: false, passive: true }));
+const removeFirstTapListeners = () => ['pointerdown', 'keydown', 'touchstart'].forEach(e => window.removeEventListener(e, firstTap));
+
+audio.addEventListener('error', () => { if (musicWanted) nextStream(); });
+audio.addEventListener('stalled', () => { if (musicWanted && !audio.paused) { clearTimeout(retryTimer); retryTimer = setTimeout(nextStream, 8000); } });
+audio.addEventListener('playing', () => { clearTimeout(retryTimer); showMusicState(true); });
+audio.addEventListener('ended', () => { if (musicWanted) { loadStream(); startMusic(); } });
+
+/* Tenta tocar assim que a página abre (TVs/quiosques costumam liberar autoplay) */
+window.addEventListener('load', () => startMusic());
 
 /* ── Cursor cinemático ── */
 let mx = 0, my = 0, rx = 0, ry = 0;
