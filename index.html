@@ -205,12 +205,14 @@
             content: '';
             position: absolute;
             top: 0; left: -7vw;
-            width: 100vw; height: 100%;
-            background: var(--wash) left top / auto 100% no-repeat;
+            width: 44vw; height: 100%;
+            background: var(--wash) left top / 100% 100% no-repeat;
             z-index: 0;
             pointer-events: none;
             opacity: .9;
             transform-origin: 0 50%;
+            -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent 100%);
+            mask-image: linear-gradient(90deg, #000 55%, transparent 100%);
             animation: drift 16s ease-in-out infinite alternate;
         }
         @keyframes drift {
@@ -442,7 +444,7 @@
             }
             .panel::after {
                 top: 100%; left: 0;
-                width: 100vh; height: 100vw;
+                width: 46vh; height: 100vw;
                 background: var(--wash) 0 0 / 100% 100% no-repeat;
                 transform-origin: 0 0;
                 transform: rotate(-90deg);
@@ -494,13 +496,6 @@
 
         @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-        @media (prefers-reduced-motion: reduce) {
-            .cam { animation: none; }
-            .slide.play .shot, .slide.play .shot:last-of-type { animation: none; }
-            .panel::after, .slide.play .panel::after, .slide.play .prop-title::after { animation: none; }
-            .shot:first-of-type { opacity: 1; }
-            .panel > *:not(.slide-grafismo) { transition: none; }
-        }
 
         /* ── PLAYER DE MÚSICA ── */
         .music-player {
@@ -1012,6 +1007,15 @@ const init = async () => {
     const loader = document.getElementById('loader');
     loader.style.opacity = '0';
     setTimeout(() => loader.style.display = 'none', 500);
+
+    /* O "vídeo" só começa de fato quando o carregamento some: reinicia a sequência do 1º imóvel */
+    const first = document.querySelector('.slide.active');
+    if (first) {
+        first.classList.remove('play');
+        void first.offsetWidth;
+        first.classList.add('play');
+        resetProgress();
+    }
 };
 
 /* ── Player de jazz ──
