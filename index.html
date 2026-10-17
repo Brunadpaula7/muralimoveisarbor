@@ -41,7 +41,7 @@
             --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
 
             /* Layout dividido: painel de informações + foto */
-            --panel-w: 40vw;
+            --panel-w: 54vw;
             --pad: clamp(32px, 4vw, 72px);
         }
 
@@ -109,16 +109,12 @@
             z-index: 10;
         }
 
-        /* Foto: ocupa o lado direito inteiro e "abre" da direita para a esquerda */
+        /* Foto em tela cheia: a "filmagem" ocupa tudo, sem cortes retos */
         .photo {
             position: absolute;
-            top: 0; right: 0; bottom: 0;
-            width: calc(100vw - var(--panel-w));
+            inset: 0;
             overflow: hidden;
-            clip-path: inset(0 0 0 100%);
-            transition: clip-path 1.4s var(--ease-out);
         }
-        .slide.active .photo { clip-path: inset(0 0 0 0); }
 
         /* Câmera: leve balanço de mão, como quem filma o ambiente caminhando */
         .cam {
@@ -164,8 +160,8 @@
             position: absolute;
             inset: 0;
             background:
-                linear-gradient(0deg, rgba(15,34,26,.55) 0%, transparent 28%),
-                linear-gradient(180deg, rgba(15,34,26,.4) 0%, transparent 22%);
+                linear-gradient(0deg, rgba(15,34,26,.6) 0%, transparent 30%),
+                linear-gradient(180deg, rgba(15,34,26,.45) 0%, transparent 24%);
             z-index: 2;
             pointer-events: none;
         }
@@ -176,11 +172,26 @@
             top: 0; left: 0; bottom: 0;
             width: var(--panel-w);
             z-index: 5;
-            padding: 120px var(--pad) 40px;
+            padding: 120px calc(var(--panel-w) * .22) 56px var(--pad);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            border-right: 1px solid var(--glass-line);
+        }
+        /* Véu em degradê: o verde se dissolve na foto, sem borda */
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0; left: 0;
+            width: 100%;
+            z-index: 0;
+            background: linear-gradient(90deg,
+                rgba(15,34,26,.94) 0%, rgba(15,34,26,.86) 38%,
+                rgba(15,34,26,.5) 70%, rgba(15,34,26,.16) 90%, transparent 100%);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            -webkit-mask-image: linear-gradient(90deg, #000 45%, transparent 100%);
+            mask-image: linear-gradient(90deg, #000 45%, transparent 100%);
+            pointer-events: none;
         }
         .panel > *:not(.slide-grafismo) {
             opacity: 0;
@@ -247,20 +258,23 @@
             letter-spacing: -0.01em;
         }
 
-        /* Specs em grade 2 colunas com linhas finas */
+        /* Specs em cápsulas translúcidas e arredondadas */
         .prop-specs {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            border-top: 1px solid var(--glass-line);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .spec-item {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            padding: 11px 0;
-            border-bottom: 1px solid var(--glass-line);
+            padding: 12px 20px;
+            border-radius: 18px;
+            background: rgba(247,242,234,.08);
+            border: 1px solid rgba(247,242,234,.16);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
         }
-        .spec-item:nth-child(even) { padding-left: 24px; border-left: 1px solid var(--glass-line); }
         .spec-label { font-family: var(--font-mono); font-size: .62rem; color: var(--areia); text-transform: uppercase; letter-spacing: .22em; }
         .spec-value { font-family: var(--font-display); font-size: clamp(1.1rem, 1.5vw, 1.5rem); color: var(--text-pri); line-height: 1.1; }
 
@@ -332,16 +346,17 @@
         }
         .nav-btn:hover { background: var(--areia); border-color: var(--areia); color: var(--verde-deep); transform: scale(1.1); }
 
-        /* Progresso: linha vertical na borda esquerda da foto */
+        /* Progresso: fio fino no rodapé */
         .progress-container {
             position: fixed;
-            top: 0; bottom: 0;
-            left: var(--panel-w);
-            width: 3px;
-            background: rgba(247,242,234,0.12);
+            left: var(--pad); right: var(--pad);
+            bottom: 24px;
+            height: 2px;
+            border-radius: 2px;
+            background: rgba(247,242,234,0.16);
             z-index: 60;
         }
-        .progress-bar { position: absolute; left: 0; top: 0; width: 100%; background: var(--areia); height: var(--p, 0%); }
+        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px; background: var(--areia); width: var(--p, 0%); }
 
         /* ── LOADER ── */
         #loader {
@@ -356,31 +371,28 @@
 
         /* ── RESPONSIVIDADE ── */
         @media (max-width: 1024px) {
-            :root { --panel-w: 46vw; --pad: 32px; }
+            :root { --panel-w: 66vw; --pad: 32px; }
             .panel { padding-top: 130px; }
             .counter { font-size: 1.8rem; }
         }
 
-        /* Mobile: foto em cima, painel embaixo */
+        /* Mobile: foto em tela cheia, informações embaixo sobre degradê */
         @media (max-width: 768px) {
             :root { --pad: 24px; }
             nav { padding: 20px var(--pad); }
             .nav-logo { font-size: 1rem; letter-spacing: .24em; text-shadow: 0 1px 12px rgba(0,0,0,.5); }
             .nav-logo::after { margin-top: 8px; width: 32px; }
-            .photo {
-                width: 100vw;
-                height: 38vh;
-                bottom: auto;
-                clip-path: inset(0 0 100% 0);
-            }
-            .slide.active .photo { clip-path: inset(0 0 0 0); }
-            .slide-overlay { background: linear-gradient(180deg, rgba(15,34,26,.55), transparent 35%, rgba(15,34,26,.35)); }
+            .slide-overlay { background: linear-gradient(180deg, rgba(15,34,26,.5), transparent 28%); }
             .panel {
-                top: 38vh;
+                top: auto;
                 width: 100vw;
-                padding: 22px var(--pad) 20px;
-                border-right: none;
-                justify-content: center;
+                padding: 80px var(--pad) 46px;
+                justify-content: flex-end;
+            }
+            .panel::before {
+                background: linear-gradient(0deg, rgba(15,34,26,.95) 0%, rgba(15,34,26,.88) 55%, rgba(15,34,26,.4) 85%, transparent 100%);
+                -webkit-mask-image: linear-gradient(0deg, #000 60%, transparent 100%);
+                mask-image: linear-gradient(0deg, #000 60%, transparent 100%);
             }
             .panel > *:not(.slide-grafismo) { transform: translateY(20px); }
             .prop-meta { margin-bottom: 10px; font-size: .58rem; }
@@ -405,21 +417,17 @@
             .prop-price-wrap { margin-bottom: 14px; }
             .price-label { font-size: .55rem; margin-bottom: 4px; }
             .prop-price { font-size: clamp(1.9rem, 8.5vw, 2.5rem); }
-            .prop-specs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-            .spec-item { padding: 8px 0 8px 12px; gap: 3px; border-left: 1px solid var(--glass-line); }
-            .spec-item:nth-child(3n+1) { padding-left: 0; border-left: none; }
-            .spec-item:nth-child(even) { padding-left: 12px; border-left: 1px solid var(--glass-line); }
-            .spec-item:nth-child(3n+1) { padding-left: 0; border-left: none; }
+            .prop-specs { gap: 6px; }
+            .spec-item { padding: 8px 12px; gap: 3px; border-radius: 14px; }
             .spec-label { font-size: .52rem; }
             .spec-value { font-size: 1.05rem; }
             .prop-location { margin-top: 12px; font-size: .62rem; letter-spacing: .24em; }
             .slide-grafismo { opacity: .035; }
-            .controls { bottom: auto; top: calc(38vh - 62px); right: var(--pad); gap: 12px; }
+            .controls { bottom: auto; top: 78px; right: var(--pad); gap: 12px; }
             .counter { font-size: 1.3rem; }
             .counter small { font-size: .7rem; }
             .nav-btn { width: 36px; height: 36px; }
-            .progress-container { left: 0; right: 0; top: calc(38vh - 3px); bottom: auto; width: auto; height: 3px; }
-            .progress-bar { width: var(--p, 0%); height: 100%; }
+            .progress-container { bottom: 18px; }
         }
 
         @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
@@ -428,7 +436,6 @@
             .cam { animation: none; }
             .slide.play .shot, .slide.play .shot:last-of-type { animation: none; }
             .shot:first-of-type { opacity: 1; }
-            .photo { transition: none; }
             .panel > *:not(.slide-grafismo) { transition: none; }
         }
 
