@@ -23,20 +23,24 @@
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; outline: none; }
 
         :root {
-            --bg:           #ffffff;
-            --text-pri:     #111111;
+            --bg:           #0f221a; /* Verde profundo (fundo/loader) */
+            --text-pri:     #f7f2ea; /* Off-white quente */
             --verde-arbor:  #204030; /* Verde Arbor oficial */
             --verde-mid:    #3a6b53; /* Tom médio para hovers e acentos */
-            --areia:        #BC9570; /* Areia Arbor (secundário) */
+            --verde-deep:   #0f221a;
+            --areia:        #BC9570; /* Areia Arbor (acento principal) */
+            --areia-claro:  #e3cfb4;
             --terracota:    #974315; /* Terracota Arbor */
-            --grey:         #888888;
+            --grey:         rgba(247, 242, 234, 0.62);
+            --glass:        rgba(15, 34, 26, 0.55);
+            --glass-line:   rgba(227, 207, 180, 0.28);
             --font-display: 'EngraversGothic BT Regular', 'Syne', sans-serif;
             --font-ui:      'EngraversGothic BT Regular', 'Syne', sans-serif;
             --font-mono:    'EngraversGothic BT Regular', 'Syne', sans-serif;
             --transition:   all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 
             /* Eixo vertical unificado (Linha de Prumo) */
-            --grid-x: 10vw;
+            --grid-x: 8vw;
         }
 
         body {
@@ -48,20 +52,21 @@
         }
 
         /* ── CURSOR CUSTOMIZADO ── */
-        #cur-dot  { position:fixed; width:6px; height:6px; border-radius:50%; background: var(--verde-arbor); pointer-events:none; z-index:9999; transform: translate(-50%,-50%); transition: transform .1s ease; }
-        #cur-ring { position:fixed; width:40px; height:40px; border-radius:50%; border:1px solid rgba(32, 64, 48, 0.4); pointer-events:none; z-index:9998; transform: translate(-50%,-50%); transition: width .3s ease, height .3s ease; }
+        #cur-dot  { position:fixed; width:6px; height:6px; border-radius:50%; background: var(--areia); pointer-events:none; z-index:9999; transform: translate(-50%,-50%); transition: transform .1s ease; }
+        #cur-ring { position:fixed; width:40px; height:40px; border-radius:50%; border:1px solid rgba(227, 207, 180, 0.5); pointer-events:none; z-index:9998; transform: translate(-50%,-50%); transition: width .3s ease, height .3s ease; }
 
-        /* ── SERIGRAFIA DE MARCA ── */
         /* ── NAV ── */
         nav {
             position:fixed; top:0; left:0; right:0; z-index:1500;
             padding: 40px var(--grid-x);
             display:flex; justify-content:space-between; align-items:center;
-            background: transparent;
+            background: linear-gradient(180deg, rgba(15,34,26,.55), transparent);
         }
         .nav-logo {
             font-family: var(--font-display);
-            font-size: 1.8rem;
+            font-size: 1.5rem;
+            letter-spacing: .32em;
+            text-transform: uppercase;
             color: var(--text-pri);
             text-decoration: none;
             display: flex;
@@ -78,27 +83,26 @@
             font-size: .6rem;
             font-family: var(--font-mono);
             letter-spacing: .4em;
-            color: var(--verde-arbor);
+            color: var(--areia);
             margin-top: 6px;
             text-transform: uppercase;
             font-weight: 400;
         }
 
         /* ── BILLBOARD SLIDER ── */
-        .billboard-container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        .billboard-container { width: 100vw; height: 100vh; position: relative; overflow: hidden; background: var(--verde-deep); }
 
         .slide {
             position: absolute;
             inset: 0;
             opacity: 0;
             visibility: hidden;
-            transition: opacity 1.5s ease, transform 1.5s ease;
-            transform: scale(1.05);
+            transition: opacity 1.5s ease, visibility 0s 1.5s;
         }
         .slide.active {
             opacity: 1;
             visibility: visible;
-            transform: scale(1);
+            transition: opacity 1.5s ease, visibility 0s;
             z-index: 10;
         }
 
@@ -108,14 +112,19 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: contrast(1.05) brightness(1);
-            transition: filter 2s ease;
+            filter: contrast(1.04) saturate(1.05);
+            transform: scale(1.08);
+            transition: transform 12s linear;
         }
+        .slide.active .slide-bg { transform: scale(1); }
 
+        /* Véu verde Arbor: garante leitura do texto claro sobre qualquer foto */
         .slide-overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 25%, transparent 55%);
+            background:
+                linear-gradient(90deg, rgba(15,34,26,.88) 0%, rgba(15,34,26,.62) 28%, rgba(15,34,26,.12) 62%, transparent 80%),
+                linear-gradient(0deg, rgba(15,34,26,.82) 0%, rgba(15,34,26,.35) 24%, transparent 46%);
             z-index: 2;
             pointer-events: none;
         }
@@ -123,7 +132,7 @@
         /* Grafismo da marca: arquivo original incorporado uma única vez ao CSS. */
         .slide-grafismo {
             position: absolute;
-            top: 62%;
+            top: 58%;
             left: 2vw;
             width: min(46vw, 620px);
             aspect-ratio: 1;
@@ -132,7 +141,8 @@
             background-repeat: no-repeat;
             background-size: contain;
             background-position: center;
-            opacity: .16;
+            filter: brightness(0) invert(1);
+            opacity: .05;
             z-index: 3;
             pointer-events: none;
         }
@@ -162,33 +172,37 @@
             transition: all 0.8s 0.4s ease;
         }
         .slide.active .prop-location-fixed { opacity: 1; transform: translateY(0); }
+        .prop-location-fixed > span:first-child { background: var(--areia) !important; }
 
         .loc-tag {
             font-family: var(--font-mono);
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             letter-spacing: 0.4em;
-            color: var(--text-pri);
+            color: var(--areia-claro);
             text-transform: uppercase;
         }
 
         /* ── SPECS ── */
         .prop-specs-fixed {
             position: absolute;
-            bottom: 110px;
+            bottom: 112px;
             left: var(--grid-x);
             z-index: 110;
             display: flex;
-            gap: 30px;
+            gap: 0;
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.8s 0.8s ease;
             flex-wrap: wrap;
+            padding-top: 18px;
+            border-top: 1px solid var(--glass-line);
         }
         .slide.active .prop-specs-fixed { opacity: 1; transform: translateY(0); }
 
-        .spec-item { display: flex; flex-direction: column; gap: 4px; }
-        .spec-label { font-family: var(--font-mono); font-size: 0.5rem; color: var(--terracota); text-transform: uppercase; letter-spacing: 0.1em; }
-        .spec-value { font-family: var(--font-display); font-size: 1.6rem; color: var(--verde-arbor); line-height: 1; font-weight: 400; }
+        .spec-item { display: flex; flex-direction: column; gap: 6px; padding-right: 32px; margin-right: 32px; border-right: 1px solid var(--glass-line); }
+        .spec-item:last-child { padding-right: 0; margin-right: 0; border-right: none; }
+        .spec-label { font-family: var(--font-mono); font-size: 0.68rem; color: var(--areia); text-transform: uppercase; letter-spacing: 0.2em; }
+        .spec-value { font-family: var(--font-display); font-size: 1.6rem; color: var(--text-pri); line-height: 1; font-weight: 400; }
 
         /* ── TÍTULO ── */
         .prop-title {
@@ -197,7 +211,7 @@
             font-weight: 400;
             line-height: 1.05;
             letter-spacing: 0;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             opacity: 0;
             transform: translateY(30px);
             transition: all 1s 0.6s ease;
@@ -205,6 +219,7 @@
             color: var(--text-pri);
             text-align: left;
             text-wrap: balance;
+            text-shadow: 0 2px 24px rgba(0,0,0,.25);
         }
 
         .prop-subtitle {
@@ -212,35 +227,35 @@
             font-size: clamp(.9rem, 1.4vw, 1.12rem);
             font-weight: 400;
             line-height: 1.35;
-            letter-spacing: .01em;
-            color: var(--terracota);
+            letter-spacing: .06em;
+            color: var(--areia-claro);
             max-width: 52%;
-            margin-bottom: 20px;
+            margin-bottom: 26px;
             opacity: 0;
             transform: translateY(24px);
             transition: all 1s .72s ease;
         }
 
-        /* ── PREÇO (botão glassmorphism) ── */
+        /* ── PREÇO ── */
         .prop-price {
             font-family: var(--font-ui);
             font-weight: 400;
             font-size: clamp(1.4rem, 3vw, 2.2rem);
-            color: var(--verde-arbor);
+            color: var(--text-pri);
             margin-bottom: 0;
             opacity: 0;
             transform: translateY(30px);
             transition: all 1s 0.8s ease;
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;
 
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-left: 4px solid var(--terracota);
-            border-radius: 12px;
+            background: var(--glass);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-line);
+            border-left: 3px solid var(--areia);
+            border-radius: 4px;
             padding: 14px 32px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
             width: fit-content;
             display: inline-flex;
             align-items: center;
@@ -260,13 +275,13 @@
             transform: translateY(-15px);
             transition: all 1s 1.2s ease;
 
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 12px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-line);
+            border-radius: 4px;
             padding: 12px 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
             align-items: flex-end;
@@ -277,20 +292,19 @@
         .id-label {
             font-family: var(--font-mono);
             font-size: 0.55rem;
-            color: var(--grey);
+            color: var(--areia);
             letter-spacing: 0.4em;
+            text-transform: uppercase;
             display: block;
             margin-bottom: 4px;
             text-align: right;
-            text-shadow: 0 2px 8px rgba(255,255,255,0.9);
         }
         .id-number {
             font-family: var(--font-display);
             font-size: 1.8rem;
-            color: var(--verde-arbor);
+            color: var(--text-pri);
             line-height: 1;
             text-align: right;
-            text-shadow: 0 2px 15px rgba(255,255,255,0.9);
         }
 
         /* ── CONTROLES ── */
@@ -305,9 +319,10 @@
         }
 
         .nav-btn {
-            background: rgba(255,255,255,0.95);
+            background: var(--glass);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(0,0,0,0.1);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-line);
             color: var(--text-pri);
             width: 50px;
             height: 50px;
@@ -317,12 +332,11 @@
             align-items: center;
             justify-content: center;
             transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
-        .nav-btn:hover { background: var(--verde-arbor); border-color: var(--verde-arbor); color: white; transform: scale(1.1); }
+        .nav-btn:hover { background: var(--areia); border-color: var(--areia); color: var(--verde-deep); transform: scale(1.1); }
 
-        .progress-container { width: 150px; height: 1px; background: rgba(0,0,0,0.1); position: relative; }
-        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: var(--verde-arbor); width: 0%; }
+        .progress-container { width: 150px; height: 2px; background: rgba(247,242,234,0.22); position: relative; }
+        .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: var(--areia); width: 0%; }
 
         /* ── LOADER ── */
         #loader {
@@ -331,15 +345,16 @@
             flex-direction: column; gap: 30px;
             transition: opacity 0.5s ease;
         }
-        .loader-text { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.6em; color: var(--verde-arbor); text-transform: uppercase; }
-        .loader-bar-wrap { width: 180px; height: 1px; background: rgba(32, 64, 48, 0.1); overflow: hidden; }
-        .loader-bar-inner { width: 100%; height: 100%; background: var(--verde-arbor); animation: load 2.5s infinite linear; }
+        .loader-text { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.6em; color: var(--areia-claro); text-transform: uppercase; }
+        .loader-bar-wrap { width: 180px; height: 1px; background: rgba(227, 207, 180, 0.18); overflow: hidden; }
+        .loader-bar-inner { width: 100%; height: 100%; background: var(--areia); animation: load 2.5s infinite linear; }
 
         /* ── RESPONSIVIDADE ── */
         @media (max-width: 1024px) {
             :root { --grid-x: 40px; }
             .prop-location-fixed { bottom: 120px; }
-            .prop-specs-fixed { bottom: 170px; gap: 20px; max-width: 80%; }
+            .prop-specs-fixed { bottom: 170px; max-width: 80%; }
+            .spec-item { padding-right: 20px; margin-right: 20px; }
             .controls { bottom: 40px; }
             .prop-id-fixed { top: 130px; padding: 10px 18px; }
             .prop-title { max-width: 90%; }
@@ -351,8 +366,9 @@
         @media (max-width: 768px) {
             :root { --grid-x: 30px; }
             nav { padding: 20px var(--grid-x); }
+            .nav-logo { font-size: 1.1rem; letter-spacing: .24em; }
             .prop-id-fixed { top: 100px; }
-            .slide-overlay { background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.82) 24%, rgba(255,255,255,.50) 58%, rgba(255,255,255,.86) 82%, rgba(255,255,255,.45)); }
+            .slide-overlay { background: linear-gradient(180deg, rgba(15,34,26,.72), rgba(15,34,26,.5) 30%, rgba(15,34,26,.35) 52%, rgba(15,34,26,.8) 78%, rgba(15,34,26,.92)); }
             .slide-content {
                 position: absolute;
                 top: clamp(155px, 24vh, 230px);
@@ -384,7 +400,7 @@
                 line-clamp: 2;
                 overflow: hidden;
             }
-            .prop-price { font-size: clamp(1.18rem, 5vw, 1.55rem); padding: 10px 16px; background: rgba(255,255,255,.76); }
+            .prop-price { font-size: clamp(1.18rem, 5vw, 1.55rem); padding: 10px 16px; }
             .prop-specs-fixed {
                 bottom: 115px;
                 left: var(--grid-x);
@@ -394,15 +410,15 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 14px 16px;
             }
-            .spec-item { min-width: 0; }
-            .spec-label { font-size: .57rem; letter-spacing: .06em; }
+            .spec-item { min-width: 0; padding-right: 0; margin-right: 0; border-right: none; }
+            .spec-label { font-size: .57rem; letter-spacing: .12em; }
             .spec-value { font-size: clamp(1.04rem, 4vw, 1.26rem); line-height: 1.12; overflow-wrap: anywhere; }
             .prop-location-fixed { bottom: 55px; }
             .loc-tag { letter-spacing: .18em; font-size: .63rem; }
             .controls { bottom: 18px; gap: 9px; }
             .progress-container { width: 70px; }
             .nav-btn { width: 34px; height: 34px; }
-            .slide-grafismo { width: min(68vw, 430px); left: -8vw; top: 64%; opacity: .14; }
+            .slide-grafismo { width: min(68vw, 430px); left: -8vw; top: 64%; opacity: .06; }
         }
 
         @media (max-width: 768px) and (max-height: 700px) {
@@ -415,6 +431,10 @@
 
         @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
+        @media (prefers-reduced-motion: reduce) {
+            .slide-bg, .slide.active .slide-bg { transition: none; transform: none; }
+        }
+
         /* ── PLAYER DE MÚSICA ── */
         .music-player {
             display: flex;
@@ -424,11 +444,11 @@
 
         /* Botão principal play/pause */
         .music-btn {
-            background: rgba(255,255,255,0.92);
+            background: var(--glass);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(32,64,48,0.15);
-            color: var(--verde-arbor);
+            border: 1px solid var(--glass-line);
+            color: var(--areia-claro);
             width: 44px;
             height: 44px;
             border-radius: 50%;
@@ -437,10 +457,9 @@
             align-items: center;
             justify-content: center;
             transition: var(--transition);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.07);
             flex-shrink: 0;
         }
-        .music-btn:hover { background: var(--verde-arbor); color: #fff; transform: scale(1.08); }
+        .music-btn:hover { background: var(--areia); color: var(--verde-deep); transform: scale(1.08); }
         .music-btn svg { width: 18px; height: 18px; }
 
         /* Painel expandido (nome da estação + ondas + volume) */
@@ -448,13 +467,12 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            background: rgba(255,255,255,0.85);
+            background: var(--glass);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(32,64,48,0.12);
+            border: 1px solid var(--glass-line);
             border-radius: 30px;
             padding: 8px 18px 8px 14px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             overflow: hidden;
             max-width: 0;
             opacity: 0;
@@ -480,7 +498,7 @@
             display: block;
             width: 3px;
             border-radius: 2px;
-            background: var(--verde-arbor);
+            background: var(--areia);
             animation: wave 0.9s ease-in-out infinite;
             transform-origin: bottom;
         }
@@ -505,7 +523,7 @@
         .station-name {
             font-family: var(--font-mono);
             font-size: 0.6rem;
-            color: var(--verde-arbor);
+            color: var(--areia-claro);
             letter-spacing: 0.25em;
             text-transform: uppercase;
             font-weight: 400;
@@ -522,7 +540,7 @@
             -webkit-appearance: none;
             outline: none;
         }
-        .station-select:focus { color: var(--verde-arbor); }
+        .station-select:focus { color: var(--areia-claro); }
 
         /* Slider de volume */
         .vol-wrap {
@@ -538,7 +556,7 @@
             width: 60px;
             height: 2px;
             border-radius: 2px;
-            background: rgba(32,64,48,0.15);
+            background: rgba(247,242,234,0.25);
             outline: none;
             cursor: pointer;
         }
@@ -546,14 +564,13 @@
             -webkit-appearance: none;
             width: 12px; height: 12px;
             border-radius: 50%;
-            background: var(--verde-arbor);
+            background: var(--areia);
             cursor: pointer;
-            box-shadow: 0 0 4px rgba(32,64,48,0.3);
         }
         .vol-slider::-moz-range-thumb {
             width: 12px; height: 12px;
             border-radius: 50%;
-            background: var(--verde-arbor);
+            background: var(--areia);
             border: none;
             cursor: pointer;
         }
