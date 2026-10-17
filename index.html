@@ -91,12 +91,12 @@
             opacity: 0;
             visibility: hidden;
             background: var(--verde-deep);
-            transition: opacity 1.8s ease-in-out, visibility 0s 1.8s;
+            transition: opacity .01s 1.7s, visibility 0s 1.7s;
         }
         .slide.active {
             opacity: 1;
             visibility: visible;
-            transition: opacity 1.5s ease-in-out, visibility 0s;
+            transition: opacity 1.6s cubic-bezier(.45,0,.55,1), visibility 0s;
             z-index: 10;
         }
 
@@ -131,13 +131,15 @@
             opacity: 0;
             will-change: transform, opacity;
         }
+        /* Movimento linear e contínuo: a foto que entra já está em movimento e a que sai
+           não freia, então a troca parece um corte de câmera real e não uma pausa. */
         .slide.play .shot {
             animation:
-                shotIn 2.6s var(--delay) ease-in-out both,
-                shotOut 2.6s var(--out) ease-in-out forwards,
-                var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both;
+                shotIn var(--fade, 2.6s) var(--delay) cubic-bezier(.45,0,.55,1) both,
+                shotOut .05s var(--out) linear forwards,
+                var(--move) var(--dur) var(--delay) linear both;
         }
-        .slide.play .shot.last { animation: shotIn 2.6s var(--delay) ease-in-out both, var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both; }
+        .slide.play .shot.last { animation: shotIn var(--fade, 2.6s) var(--delay) cubic-bezier(.45,0,.55,1) both, var(--move) var(--dur) var(--delay) linear both; }
         @keyframes shotIn  { from { opacity: 0; } to { opacity: 1; } }
         @keyframes shotOut { from { opacity: 1; } to { opacity: 0; } }
         /* caminha para dentro do ambiente (avanço) */
@@ -680,6 +682,7 @@
  */
 const DATA_URL = "https://arbor-backend.arborimoveis-bruna.workers.dev/feed/vrsync.xml";
 const SLIDE_DURATION = 16000;
+const SHOT_FADE = 2.6;  /* duração da fusão entre fotos (s) */
 const MAX_SHOTS = 4;   /* ambientes por imóvel (cada um ~4s com 4 fotos) */
 
 let state = {
@@ -944,9 +947,12 @@ const scheduleShots = (slide, idx) => {
     if (!good.length) return 0;
     const d = SLIDE_DURATION / 1000 / good.length;
     good.forEach((img, i) => {
+        /* a 1ª foto não faz fusão própria (quem faz é a troca de imóvel);
+           as outras entram por cima e a anterior só some depois que a nova está opaca */
+        img.style.setProperty('--fade',  i === 0 ? '.01s' : SHOT_FADE + 's');
         img.style.setProperty('--delay', (i * d).toFixed(2) + 's');
-        img.style.setProperty('--out',   ((i + 1) * d).toFixed(2) + 's');
-        img.style.setProperty('--dur',   (d + 3).toFixed(2) + 's');
+        img.style.setProperty('--out',   ((i + 1) * d + SHOT_FADE).toFixed(2) + 's');
+        img.style.setProperty('--dur',   ((i + 1) * d + SHOT_FADE + .4 - i * d).toFixed(2) + 's');
         img.style.setProperty('--move',  'move' + ((idx + i) % 4));
         img.classList.toggle('last', i === good.length - 1);
     });
