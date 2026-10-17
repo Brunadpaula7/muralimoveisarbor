@@ -120,16 +120,45 @@
         }
         .slide.active .photo { clip-path: inset(0 0 0 0); }
 
-        .slide-bg {
+        /* Câmera: leve balanço de mão, como quem filma o ambiente caminhando */
+        .cam {
+            position: absolute;
+            inset: -3%;
+            animation: sway 7s ease-in-out infinite alternate;
+        }
+        @keyframes sway {
+            0%   { transform: translate(-0.6%, 0.3%) rotate(-0.25deg); }
+            50%  { transform: translate(0.4%, -0.4%) rotate(0.15deg); }
+            100% { transform: translate(0.7%, 0.2%) rotate(0.3deg); }
+        }
+
+        /* Cada ambiente é um "plano" com movimento de câmera próprio */
+        .shot {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scale(1.14);
-            transition: transform 12s linear;
+            opacity: 0;
+            will-change: transform, opacity;
         }
-        .slide.active .slide-bg { transform: scale(1); }
+        .slide.play .shot {
+            animation:
+                shotIn 1.4s var(--delay) ease both,
+                shotOut 1.4s var(--out) ease forwards,
+                var(--move) var(--dur) var(--delay) cubic-bezier(.45,.05,.55,.95) both;
+        }
+        .slide.play .shot:last-of-type { animation: shotIn 1.4s var(--delay) ease both, var(--move) var(--dur) var(--delay) cubic-bezier(.45,.05,.55,.95) both; }
+        @keyframes shotIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shotOut { from { opacity: 1; } to { opacity: 0; } }
+        /* avanço (dolly in) */
+        @keyframes move0 { from { transform: scale(1.02) translate(0, 0); }          to { transform: scale(1.22) translate(-1.5%, -1%); } }
+        /* panorâmica da direita para a esquerda */
+        @keyframes move1 { from { transform: scale(1.2) translate(4%, 0); }          to { transform: scale(1.2) translate(-4%, 0.5%); } }
+        /* recuo (dolly out) */
+        @keyframes move2 { from { transform: scale(1.24) translate(1.5%, 1%); }      to { transform: scale(1.03) translate(0, 0); } }
+        /* panorâmica da esquerda para a direita, subindo levemente */
+        @keyframes move3 { from { transform: scale(1.2) translate(-4%, 1.5%); }      to { transform: scale(1.2) translate(4%, -1%); } }
 
         .slide-overlay {
             position: absolute;
@@ -396,7 +425,9 @@
         @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
         @media (prefers-reduced-motion: reduce) {
-            .slide-bg, .slide.active .slide-bg { transition: none; transform: none; }
+            .cam { animation: none; }
+            .slide.play .shot, .slide.play .shot:last-of-type { animation: none; }
+            .shot:first-of-type { opacity: 1; }
             .photo { transition: none; }
             .panel > *:not(.slide-grafismo) { transition: none; }
         }
@@ -628,7 +659,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 const DATA_URL = "https://arbor-backend.arborimoveis-bruna.workers.dev/feed/vrsync.xml";
-const SLIDE_DURATION = 9000;
+const SLIDE_DURATION = 12000;
+const MAX_SHOTS = 4;   /* ambientes por imóvel (cada um ~3s com 4 fotos) */
 
 let state = {
     items: [],
@@ -710,17 +742,20 @@ const fetchFeed = async () => {
            Prefere primary="true"; fallback para o primeiro image qualquer */
         let photoUrl = '';
         const items = xmlNodes(l, 'Item');
-        let fallbackPhoto = '';
+        const photos = [];
         for (const item of items) {
             const medium  = (item.getAttribute('medium') || '').toLowerCase();
             const primary = item.getAttribute('primary');
             if (medium === 'image') {
                 const url = sanitizePhotoUrl(item.textContent);
-                if (!fallbackPhoto && url) fallbackPhoto = url;
-                if (primary?.toLowerCase() === 'true' && url) { photoUrl = url; break; }
+                if (!url || photos.includes(url)) continue;
+                if (primary?.toLowerCase() === 'true' && !photoUrl) photoUrl = url;
+                else photos.push(url);
             }
         }
-        if (!photoUrl) photoUrl = fallbackPhoto;
+        /* Foto principal abre o "vídeo"; as demais mostram outros ambientes */
+        const gallery = (photoUrl ? [photoUrl] : []).concat(photos).slice(0, MAX_SHOTS);
+        if (!photoUrl) photoUrl = gallery[0] || '';
 
         /* ── Área: ConstructedArea → LivingArea ── */
         const area = xmlDetail(l, 'ConstructedArea') || xmlDetail(l, 'LivingArea');
@@ -758,7 +793,8 @@ const fetchFeed = async () => {
             beds:   xmlDetail(l, 'Bedrooms') || '—',
             suites: xmlDetail(l, 'Suites') || '—',
             garage: xmlDetail(l, 'Garage') || '—',
-            photo:  photoUrl
+            photo:  photoUrl,
+            gallery
         };
     }).filter(p => p.id && p.title && p.photo);
 };
@@ -782,13 +818,19 @@ const renderSlides = () => {
     }
 
     container.innerHTML = state.items.map((p, idx) => `
-        <div class="slide ${idx === 0 ? 'active' : ''}" id="slide-${idx}">
+        <div class="slide ${idx === 0 ? 'active play' : ''}" id="slide-${idx}">
             <div class="photo">
-                <img src="${escapeHTML(p.photo)}"
-                     class="slide-bg"
-                     alt="${escapeHTML(p.title)}"
-                     loading="${idx < 2 ? 'eager' : 'lazy'}"
-                     onerror="this.onerror=null;this.style.visibility='hidden';">
+                <div class="cam">
+                    ${p.gallery.map((src, i) => {
+                        const d = SLIDE_DURATION / 1000 / p.gallery.length;
+                        return `<img src="${escapeHTML(src)}"
+                             class="shot"
+                             style="--delay:${(i * d).toFixed(2)}s;--out:${((i + 1) * d).toFixed(2)}s;--dur:${(d + 1.6).toFixed(2)}s;--move:move${(idx + i) % 4}"
+                             alt="${escapeHTML(p.title)}"
+                             loading="${idx < 2 ? 'eager' : 'lazy'}"
+                             onerror="this.onerror=null;this.remove();">`;
+                    }).join('')}
+                </div>
                 <div class="slide-overlay"></div>
             </div>
 
@@ -849,7 +891,11 @@ const goToSlide = index => {
     if (!slides.length) return;
     slides[state.currentIndex].classList.remove('active');
     state.currentIndex = ((index % state.items.length) + state.items.length) % state.items.length;
-    slides[state.currentIndex].classList.add('active');
+    const next = slides[state.currentIndex];
+    /* reinicia a sequência de planos da câmera */
+    next.classList.remove('play');
+    void next.offsetWidth;
+    next.classList.add('active', 'play');
     updateCounter();
     resetProgress();
 };
