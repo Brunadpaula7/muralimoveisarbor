@@ -727,6 +727,12 @@ const terrainFromText = text => {
     return '';
 };
 
+/* ── Contagem (quartos, suítes, vagas): só valores maiores que zero ── */
+const positiveCount = raw => {
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? String(n) : '';
+};
+
 /* ── Protege conteúdo vindo do feed ao inserir no HTML ── */
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -820,9 +826,10 @@ const fetchFeed = async () => {
             area:   formatArea(area) || '—',
             lot,
             condoFee,
-            beds:   xmlDetail(l, 'Bedrooms') || '—',
-            suites: xmlDetail(l, 'Suites') || '—',
-            garage: xmlDetail(l, 'Garage') || '—',
+            /* vazio quando o feed não informa (ou informa 0): o item não aparece */
+            beds:   positiveCount(xmlDetail(l, 'Bedrooms')),
+            suites: positiveCount(xmlDetail(l, 'Suites')),
+            garage: positiveCount(xmlDetail(l, 'Garage')),
             photo:  photoUrl,
             gallery
         };
@@ -884,14 +891,14 @@ const renderSlides = () => {
                         <span class="spec-label">Terreno</span>
                         <span class="spec-value">${escapeHTML(p.lot)}</span>
                     </div>` : ''}
-                    <div class="spec-item">
-                        <span class="spec-label">Quartos / Suítes</span>
-                        <span class="spec-value">${escapeHTML(p.beds)} / ${escapeHTML(p.suites)}</span>
-                    </div>
-                    <div class="spec-item">
+                    ${(p.beds || p.suites) ? `<div class="spec-item">
+                        <span class="spec-label">${p.beds && p.suites ? 'Quartos / Suítes' : (p.beds ? 'Quartos' : 'Suítes')}</span>
+                        <span class="spec-value">${escapeHTML([p.beds, p.suites].filter(Boolean).join(' / '))}</span>
+                    </div>` : ''}
+                    ${p.garage ? `<div class="spec-item">
                         <span class="spec-label">Vagas</span>
                         <span class="spec-value">${escapeHTML(p.garage)}</span>
-                    </div>
+                    </div>` : ''}
                     ${p.condoFee > 0 ? `<div class="spec-item">
                         <span class="spec-label">Condomínio</span>
                         <span class="spec-value">${escapeHTML(formatBRL(p.condoFee))}/mês</span>
