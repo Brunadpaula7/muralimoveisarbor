@@ -107,52 +107,19 @@
             overflow: hidden;
         }
 
-        /* Câmera na mão de quem caminha mostrando o ambiente:
-           .cam  = deriva lenta e irregular do corpo/ombros
-           .rig  = passada (sobe/desce) + microtremor da mão
-           .shot = movimento do plano (avanço, olhar para o lado, recuo) */
+        /* Câmera deslizando suave, sem trancos: só uma deriva lenta e bem leve do enquadramento */
         .cam {
             position: absolute;
             inset: -4%;
-            animation: drift 13s linear infinite;
+            animation: drift 22s ease-in-out infinite;
             will-change: transform;
         }
         @keyframes drift {
-            0%   { transform: translate(-0.5%, 0.2%)  rotate(-0.30deg); }
-            14%  { transform: translate(0.1%, -0.35%) rotate(-0.05deg); }
-            29%  { transform: translate(0.6%, 0.1%)   rotate(0.28deg); }
-            43%  { transform: translate(0.3%, 0.45%)  rotate(0.12deg); }
-            57%  { transform: translate(-0.2%, -0.1%) rotate(-0.18deg); }
-            71%  { transform: translate(-0.6%, -0.4%) rotate(-0.34deg); }
-            86%  { transform: translate(-0.1%, 0.3%)  rotate(-0.1deg); }
-            100% { transform: translate(-0.5%, 0.2%)  rotate(-0.30deg); }
+            0%, 100% { transform: translate(-0.4%, 0.15%) rotate(-0.15deg); }
+            33%      { transform: translate(0.35%, -0.25%) rotate(0.10deg); }
+            66%      { transform: translate(0.1%, 0.3%)   rotate(-0.04deg); }
         }
-        .rig {
-            position: absolute;
-            inset: 0;
-            animation: step 1.15s ease-in-out infinite, shake 2.9s linear infinite;
-            will-change: transform;
-        }
-        /* passada: leve sobe e desce com balanço lateral */
-        @keyframes step {
-            0%, 100% { transform: translateY(0)      rotate(0deg); }
-            25%      { transform: translateY(0.28%)  rotate(0.06deg); }
-            50%      { transform: translateY(0)      rotate(0deg); }
-            75%      { transform: translateY(0.28%)  rotate(-0.06deg); }
-        }
-
-        /* microtremor da mão: pequenos saltos irregulares */
-        @keyframes shake {
-            0%   { translate: 0 0; }
-            9%   { translate: 0.08% -0.06%; }
-            17%  { translate: -0.06% 0.05%; }
-            31%  { translate: 0.05% 0.08%; }
-            44%  { translate: -0.09% -0.04%; }
-            58%  { translate: 0.04% -0.07%; }
-            73%  { translate: -0.05% 0.06%; }
-            86%  { translate: 0.07% 0.02%; }
-            100% { translate: 0 0; }
-        }
+        .rig { position: absolute; inset: 0; }
 
         /* Cada ambiente é um "plano" com movimento de câmera próprio */
         .shot {
@@ -170,7 +137,7 @@
                 shotOut 2.6s var(--out) ease-in-out forwards,
                 var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both;
         }
-        .slide.play .shot:last-of-type { animation: shotIn 2.6s var(--delay) ease-in-out both, var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both; }
+        .slide.play .shot.last { animation: shotIn 2.6s var(--delay) ease-in-out both, var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both; }
         @keyframes shotIn  { from { opacity: 0; } to { opacity: 1; } }
         @keyframes shotOut { from { opacity: 1; } to { opacity: 0; } }
         /* caminha para dentro do ambiente (avanço) */
@@ -720,7 +687,8 @@ let state = {
     currentIndex: 0,
     interval: null,
     progressInterval: null,
-    startTime: 0
+    startTime: 0,
+    switching: false
 };
 
 /* ── Formatação de moeda ── */
@@ -881,15 +849,11 @@ const renderSlides = () => {
         <div class="slide ${idx === 0 ? 'active play' : ''}" id="slide-${idx}">
             <div class="photo">
                 <div class="cam"><div class="rig">
-                    ${p.gallery.map((src, i) => {
-                        const d = SLIDE_DURATION / 1000 / p.gallery.length;
-                        return `<img src="${escapeHTML(src)}"
+                    ${p.gallery.map(src => `<img data-src="${escapeHTML(src)}"
                              class="shot"
-                             style="--delay:${(i * d).toFixed(2)}s;--out:${((i + 1) * d).toFixed(2)}s;--dur:${(d + 3).toFixed(2)}s;--move:move${(idx + i) % 4}"
-                             alt="${escapeHTML(p.title)}"
-                             loading="${idx < 2 ? 'eager' : 'lazy'}"
-                             onerror="this.onerror=null;this.remove();">`;
-                    }).join('')}
+                             referrerpolicy="no-referrer"
+                             decoding="async"
+                             alt="${escapeHTML(p.title)}">`).join('')}
                 </div></div>
                 <div class="slide-overlay"></div>
             </div>
@@ -944,23 +908,81 @@ const updateCounter = () => {
     el.innerHTML = `${pad(state.currentIndex + 1)}<small>/ ${pad(state.items.length)}</small>`;
 };
 
+/* ── Carregamento robusto das fotos ──
+   Em vez de baixar todas as fotos de todos os imóveis de uma vez (o que causava
+   falhas), carrega só o imóvel atual e o próximo, tenta de novo se falhar e
+   descarta a foto que não carregar. */
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const loadShot = async (img, tries = 3) => {
+    for (let n = 0; n < tries; n++) {
+        const ok = await new Promise(resolve => {
+            img.onload  = () => resolve(img.naturalWidth > 0);
+            img.onerror = () => resolve(false);
+            img.removeAttribute('src');
+            img.src = img.dataset.src;
+        });
+        if (ok) { img.dataset.ok = '1'; return true; }
+        await wait(800 * (n + 1));
+    }
+    img.dataset.bad = '1';
+    return false;
+};
+
+const preloadSlide = idx => {
+    const slide = document.getElementById('slide-' + idx);
+    if (!slide) return Promise.resolve();
+    if (!slide._preload) slide._preload = Promise.all([...slide.querySelectorAll('.shot')].map(img => loadShot(img)));
+    return slide._preload;
+};
+
+/* Distribui o tempo do imóvel só entre as fotos que realmente carregaram */
+const scheduleShots = (slide, idx) => {
+    const shots = [...slide.querySelectorAll('.shot')];
+    const good = shots.filter(img => img.dataset.ok === '1');
+    shots.forEach(img => { img.classList.remove('last'); img.style.display = img.dataset.ok === '1' ? '' : 'none'; });
+    if (!good.length) return 0;
+    const d = SLIDE_DURATION / 1000 / good.length;
+    good.forEach((img, i) => {
+        img.style.setProperty('--delay', (i * d).toFixed(2) + 's');
+        img.style.setProperty('--out',   ((i + 1) * d).toFixed(2) + 's');
+        img.style.setProperty('--dur',   (d + 3).toFixed(2) + 's');
+        img.style.setProperty('--move',  'move' + ((idx + i) % 4));
+        img.classList.toggle('last', i === good.length - 1);
+    });
+    return good.length;
+};
+
 /* ── Navegação ── */
-const goToSlide = index => {
+const goToSlide = async (index, dir = 1) => {
     const slides = document.querySelectorAll('.slide');
-    if (!slides.length) return;
+    if (!slides.length || state.switching) return;
+    state.switching = true;
+    const total = state.items.length;
+    let target = ((index % total) + total) % total;
+
+    /* garante fotos prontas; se o imóvel não tiver nenhuma foto, pula para o próximo */
+    for (let tries = 0; tries < total; tries++) {
+        await Promise.race([preloadSlide(target), wait(8000)]);
+        if (scheduleShots(slides[target], target) || tries === total - 1) break;
+        target = (target + dir + total) % total;
+    }
+
     slides[state.currentIndex].classList.remove('active');
-    state.currentIndex = ((index % state.items.length) + state.items.length) % state.items.length;
-    const next = slides[state.currentIndex];
+    state.currentIndex = target;
+    const next = slides[target];
     /* reinicia a sequência de planos da câmera */
     next.classList.remove('play');
     void next.offsetWidth;
     next.classList.add('active', 'play');
     updateCounter();
     resetProgress();
+    state.switching = false;
+    preloadSlide((target + 1) % total);   /* já deixa o próximo imóvel carregando */
 };
 
 const nextSlide = () => goToSlide(state.currentIndex + 1);
-const prevSlide = () => goToSlide(state.currentIndex - 1);
+const prevSlide = () => goToSlide(state.currentIndex - 1, -1);
 
 /* ── Ciclo automático + barra de progresso ── */
 const startAutoCycle = () => {
@@ -987,6 +1009,12 @@ const init = async () => {
     try {
         state.items = await fetchFeed();
         renderSlides();
+        if (state.items.length) {
+            /* o loader só some quando as fotos do 1º imóvel chegaram (ou após 10s) */
+            await Promise.race([preloadSlide(0), wait(10000)]);
+            scheduleShots(document.getElementById('slide-0'), 0);
+            preloadSlide(1 % state.items.length);
+        }
         startAutoCycle();
     } catch (err) {
         console.error('Erro ao carregar feed Arbor:', err);
