@@ -91,12 +91,12 @@
             opacity: 0;
             visibility: hidden;
             background: var(--verde-deep);
-            transition: opacity .9s ease, visibility 0s .9s;
+            transition: opacity 1.8s ease-in-out, visibility 0s 1.8s;
         }
         .slide.active {
             opacity: 1;
             visibility: visible;
-            transition: opacity .6s ease, visibility 0s;
+            transition: opacity 1.5s ease-in-out, visibility 0s;
             z-index: 10;
         }
 
@@ -107,16 +107,51 @@
             overflow: hidden;
         }
 
-        /* Câmera: leve balanço de mão, como quem filma o ambiente caminhando */
+        /* Câmera na mão de quem caminha mostrando o ambiente:
+           .cam  = deriva lenta e irregular do corpo/ombros
+           .rig  = passada (sobe/desce) + microtremor da mão
+           .shot = movimento do plano (avanço, olhar para o lado, recuo) */
         .cam {
             position: absolute;
-            inset: -3%;
-            animation: sway 7s ease-in-out infinite alternate;
+            inset: -4%;
+            animation: drift 13s linear infinite;
+            will-change: transform;
         }
-        @keyframes sway {
-            0%   { transform: translate(-0.6%, 0.3%) rotate(-0.25deg); }
-            50%  { transform: translate(0.4%, -0.4%) rotate(0.15deg); }
-            100% { transform: translate(0.7%, 0.2%) rotate(0.3deg); }
+        @keyframes drift {
+            0%   { transform: translate(-0.5%, 0.2%)  rotate(-0.30deg); }
+            14%  { transform: translate(0.1%, -0.35%) rotate(-0.05deg); }
+            29%  { transform: translate(0.6%, 0.1%)   rotate(0.28deg); }
+            43%  { transform: translate(0.3%, 0.45%)  rotate(0.12deg); }
+            57%  { transform: translate(-0.2%, -0.1%) rotate(-0.18deg); }
+            71%  { transform: translate(-0.6%, -0.4%) rotate(-0.34deg); }
+            86%  { transform: translate(-0.1%, 0.3%)  rotate(-0.1deg); }
+            100% { transform: translate(-0.5%, 0.2%)  rotate(-0.30deg); }
+        }
+        .rig {
+            position: absolute;
+            inset: 0;
+            animation: step 1.15s ease-in-out infinite, shake 2.9s linear infinite;
+            will-change: transform;
+        }
+        /* passada: leve sobe e desce com balanço lateral */
+        @keyframes step {
+            0%, 100% { transform: translateY(0)      rotate(0deg); }
+            25%      { transform: translateY(0.28%)  rotate(0.06deg); }
+            50%      { transform: translateY(0)      rotate(0deg); }
+            75%      { transform: translateY(0.28%)  rotate(-0.06deg); }
+        }
+
+        /* microtremor da mão: pequenos saltos irregulares */
+        @keyframes shake {
+            0%   { translate: 0 0; }
+            9%   { translate: 0.08% -0.06%; }
+            17%  { translate: -0.06% 0.05%; }
+            31%  { translate: 0.05% 0.08%; }
+            44%  { translate: -0.09% -0.04%; }
+            58%  { translate: 0.04% -0.07%; }
+            73%  { translate: -0.05% 0.06%; }
+            86%  { translate: 0.07% 0.02%; }
+            100% { translate: 0 0; }
         }
 
         /* Cada ambiente é um "plano" com movimento de câmera próprio */
@@ -131,26 +166,31 @@
         }
         .slide.play .shot {
             animation:
-                shotIn 1.4s var(--delay) ease both,
-                shotOut 1.4s var(--out) ease forwards,
-                var(--move) var(--dur) var(--delay) cubic-bezier(.45,.05,.55,.95) both;
+                shotIn 2.6s var(--delay) ease-in-out both,
+                shotOut 2.6s var(--out) ease-in-out forwards,
+                var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both;
         }
-        .slide.play .shot:last-of-type { animation: shotIn 1.4s var(--delay) ease both, var(--move) var(--dur) var(--delay) cubic-bezier(.45,.05,.55,.95) both; }
+        .slide.play .shot:last-of-type { animation: shotIn 2.6s var(--delay) ease-in-out both, var(--move) var(--dur) var(--delay) cubic-bezier(.37,0,.63,1) both; }
         @keyframes shotIn  { from { opacity: 0; } to { opacity: 1; } }
         @keyframes shotOut { from { opacity: 1; } to { opacity: 0; } }
-        /* avanço (dolly in) */
-        @keyframes move0 { from { transform: scale(1.02) translate(0, 0); }          to { transform: scale(1.22) translate(-1.5%, -1%); } }
-        /* panorâmica da direita para a esquerda */
-        @keyframes move1 { from { transform: scale(1.2) translate(4%, 0); }          to { transform: scale(1.2) translate(-4%, 0.5%); } }
-        /* recuo (dolly out) */
-        @keyframes move2 { from { transform: scale(1.24) translate(1.5%, 1%); }      to { transform: scale(1.03) translate(0, 0); } }
-        /* panorâmica da esquerda para a direita, subindo levemente */
-        @keyframes move3 { from { transform: scale(1.2) translate(-4%, 1.5%); }      to { transform: scale(1.2) translate(4%, -1%); } }
+        /* caminha para dentro do ambiente (avanço) */
+        @keyframes move0 { from { transform: scale(1.04) translate(0, 0);        transform-origin: 46% 58%; }
+                           to   { transform: scale(1.32) translate(-1%, 0.6%);   transform-origin: 46% 58%; } }
+        /* para e olha da direita para a esquerda (como virar o corpo) */
+        @keyframes move1 { from { transform: scale(1.24) translate(5%, 0)    rotate(0.5deg); }
+                           to   { transform: scale(1.24) translate(-5%, 0.6%) rotate(-0.5deg); } }
+        /* dá um passo atrás e abre o enquadramento */
+        @keyframes move2 { from { transform: scale(1.3) translate(1.5%, 1%); transform-origin: 54% 52%; }
+                           to   { transform: scale(1.05) translate(0, 0);     transform-origin: 54% 52%; } }
+        /* olha da esquerda para a direita, subindo o olhar */
+        @keyframes move3 { from { transform: scale(1.24) translate(-5%, 1.6%) rotate(-0.4deg); }
+                           to   { transform: scale(1.24) translate(5%, -1.2%) rotate(0.4deg); } }
 
         .slide-overlay {
             position: absolute;
             inset: 0;
             background:
+                radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(8,20,14,.32) 100%),
                 radial-gradient(circle at 93% 9%, rgba(15,34,26,.6) 0%, rgba(15,34,26,.3) 14%, transparent 28%),
                 linear-gradient(0deg, rgba(15,34,26,.6) 0%, transparent 30%),
                 linear-gradient(180deg, rgba(15,34,26,.45) 0%, transparent 24%);
@@ -211,13 +251,13 @@
         }
         .slide.play .panel::after {
             animation: drift 16s ease-in-out infinite alternate,
-                       paintOn 1.9s .1s cubic-bezier(.6,0,.3,1) both;
+                       paintOn 2.9s .3s cubic-bezier(.55,0,.25,1) both;
         }
         @keyframes strokeOn {
             from { clip-path: inset(0 100% 0 0); }
             to   { clip-path: inset(0 0 0 0); }
         }
-        .slide.play .prop-title::after { animation: strokeOn .9s 1.2s cubic-bezier(.5,0,.2,1) both; }
+        .slide.play .prop-title::after { animation: strokeOn 1.3s 1.9s cubic-bezier(.5,0,.2,1) both; }
 
         .panel > *:not(.slide-grafismo) {
             opacity: 0;
@@ -329,22 +369,6 @@
         }
         .prop-location::before { content: ''; width: 30px; height: 2px; background: var(--areia); }
 
-        /* Grafismo da marca no rodapé do painel: arquivo original incorporado uma única vez ao CSS. */
-        .slide-grafismo {
-            position: absolute;
-            bottom: -8%;
-            left: -10%;
-            width: min(38vw, 520px);
-            aspect-ratio: 1;
-            background-image: var(--grafismo);
-            background-repeat: no-repeat;
-            background-size: contain;
-            background-position: center;
-            filter: brightness(0) invert(1);
-            opacity: .045;
-            z-index: 0;
-            pointer-events: none;
-        }
         .panel > *:not(.slide-grafismo) { position: relative; z-index: 1; }
 
         /* ── CONTADOR + CONTROLES (sobre a foto, canto inferior direito) ── */
@@ -419,7 +443,7 @@
                 animation: none;
                 opacity: .9;
             }
-            .slide.play .panel::after { animation: paintOn 1.9s .1s cubic-bezier(.6,0,.3,1) both; }
+            .slide.play .panel::after { animation: paintOn 2.9s .3s cubic-bezier(.55,0,.25,1) both; }
             .prop-title::after { height: 26px; width: 200px; }
             .panel::before {
                 background: linear-gradient(0deg, rgba(15,34,26,.95) 0%, rgba(15,34,26,.88) 55%, rgba(15,34,26,.4) 85%, transparent 100%);
@@ -454,7 +478,6 @@
             .spec-label { font-size: .52rem; }
             .spec-value { font-size: 1.05rem; }
             .prop-location { margin-top: 12px; font-size: .62rem; letter-spacing: .24em; }
-            .slide-grafismo { opacity: .035; }
             .controls { bottom: auto; top: 134px; right: var(--pad); gap: 12px; }
             .counter { font-size: 1.3rem; }
             .counter small { font-size: .7rem; }
@@ -857,17 +880,17 @@ const renderSlides = () => {
     container.innerHTML = state.items.map((p, idx) => `
         <div class="slide ${idx === 0 ? 'active play' : ''}" id="slide-${idx}">
             <div class="photo">
-                <div class="cam">
+                <div class="cam"><div class="rig">
                     ${p.gallery.map((src, i) => {
                         const d = SLIDE_DURATION / 1000 / p.gallery.length;
                         return `<img src="${escapeHTML(src)}"
                              class="shot"
-                             style="--delay:${(i * d).toFixed(2)}s;--out:${((i + 1) * d).toFixed(2)}s;--dur:${(d + 1.6).toFixed(2)}s;--move:move${(idx + i) % 4}"
+                             style="--delay:${(i * d).toFixed(2)}s;--out:${((i + 1) * d).toFixed(2)}s;--dur:${(d + 3).toFixed(2)}s;--move:move${(idx + i) % 4}"
                              alt="${escapeHTML(p.title)}"
                              loading="${idx < 2 ? 'eager' : 'lazy'}"
                              onerror="this.onerror=null;this.remove();">`;
                     }).join('')}
-                </div>
+                </div></div>
                 <div class="slide-overlay"></div>
             </div>
 
@@ -907,7 +930,6 @@ const renderSlides = () => {
 
                 <div class="prop-location">${escapeHTML(p.hood)}</div>
 
-                <div class="slide-grafismo" aria-hidden="true"></div>
             </div>
         </div>
     `).join('');
